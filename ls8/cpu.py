@@ -7,7 +7,22 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        pass
+        self.ram = [0x00] * 256
+        self.registers = [0x00] * 8
+
+        self.running = True
+
+        self.pc = 0 # Program Counter, address of the currently executing instruction
+        self.ir = 0 # Instruction Register, contains a copy of the currently executing instruction
+        self.mar = 0 # Memory Address Register, holds the memory address we're reading or writing
+        self.mdr = 0 # Memory Data Register, holds the value to write or the value just read
+        self.fl = 0 # Flags, L G E
+
+    def ram_read(self, mar):
+        return self.ram[mar]
+
+    def ram_write(self, mar, mdr):
+        self.ram[mar] = mdr
 
     def load(self):
         """Load a program into memory."""
@@ -60,6 +75,40 @@ class CPU:
 
         print()
 
+    def incrementPC(self, i):
+        if i == '00':
+            self.pc += 1
+        elif i == '01':
+            self.pc += 2
+        elif i == '10':
+            self.pc += 3
+        else:
+            raise Exception("Unsupported 'i' value")
+
+
     def run(self):
         """Run the CPU."""
-        pass
+        while self.running:
+            ir = self.ram_read(self.pc)
+
+            operand_a = self.ram_read(self.pc + 1)
+            operand_b = self.ram_read(self.pc + 2)
+
+            # LDI register immediate
+            if ir == 0x82:
+                self.registers[operand_a] = operand_b
+
+                self.incrementPC(bin(ir)[2:4])
+                
+            # Print numeric value stored in the given register
+            elif ir == 0x47:
+                print(self.registers[operand_a])
+
+                self.incrementPC(bin(ir)[2:4])
+
+            # Halt the CPU
+            elif ir == 0x01:
+                self.running = False
+                self.incrementPC(bin(ir)[2:4])
+
+

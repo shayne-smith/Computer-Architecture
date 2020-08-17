@@ -60,6 +60,19 @@ but you'll have to implement those three above instructions first!
 ## Step 0: IMPORTANT: inventory what is here!
 
 * Make a list of files here.
+
+- cpu.py | builds a CPU class
+- ls8.py | imports, loads, and runs the CPU
+- call.ls8 | function (subroutine) that enables you to jump to any address
+- interrupts.ls8 | fires a timer interrupt
+- keyboard.ls8 | check if a key has been pressed
+- mult.ls8 | mulitiplies to numbers
+- print8.ls8 | prints the number 8 on the screen
+- printstr.ls8 | prints a string at a given address
+- sctest.ls8 | test for sprint challenge
+- stack.ls8 | builds a stack
+- stackoverflow.ls8 | ??
+
 * Write a short 3-10-word description of what each file does.
 * Note what has been implemented, and what hasn't.
 * Read this whole file.
