@@ -7,8 +7,8 @@ class CPU:
 
     def __init__(self):
         """Construct a new CPU."""
-        self.ram = [0x00] * 256
-        self.registers = [0x00] * 8
+        self.ram = [0b00000000] * 256
+        self.reg = [0b00000000] * 8
 
         self.running = True
 
@@ -29,21 +29,42 @@ class CPU:
 
         address = 0
 
-        # For now, we've just hardcoded a program:
+        if len(sys.argv) != 2:
+            print("usage: comp.py progname")
+            sys.exit(1)
 
-        program = [
-            # From print8.ls8
-            0b10000010, # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111, # PRN R0
-            0b00000000,
-            0b00000001, # HLT
-        ]
+        try:
+            with open(sys.argv[1]) as f:
+                for line in f:
+                    line = line.strip()
+                    temp = line.split()
+                    # print(temp)
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                    if len(temp) == 0:
+                        continue
+                    
+                    if temp[0][0] == '#':
+                        continue
+
+                    try:
+                        self.ram[address] = int(temp[0], 2)
+                        # print(f"RAM: {self.ram[address]}")
+
+                    except ValueError:
+                        print(f"Invalid number: {temp[0]}")
+                        sys.exit(1)
+
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"Couldn't open {sys.argv[1]}")
+            sys.exit(2)
+
+        if address == 0:
+            print("Program was empty!")
+            sys.exit(3)
+
+        # print(f"RAM: {self.ram}")
 
 
     def alu(self, op, reg_a, reg_b):
@@ -51,9 +72,18 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+            # print("Running multiply")
+            # print(self.reg[reg_a])
+            # print(self.reg[reg_b])
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "DIV":
+            self.reg[reg_a] /= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
+
 
     def trace(self):
         """
@@ -75,13 +105,10 @@ class CPU:
 
         print()
 
+
     def incrementPC(self, i):
-        if i == '00':
-            self.pc += 1
-        elif i == '01':
-            self.pc += 2
-        elif i == '10':
-            self.pc += 3
+        if i >= 1 & i <= 3:
+            self.pc += i
         else:
             raise Exception("Unsupported 'i' value")
 
@@ -90,25 +117,37 @@ class CPU:
         """Run the CPU."""
         while self.running:
             ir = self.ram_read(self.pc)
+            # print(f"IR: {ir}")
 
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
 
             # LDI register immediate
-            if ir == 0x82:
-                self.registers[operand_a] = operand_b
+            if ir == 130:
+                self.reg[operand_a] = operand_b
 
-                self.incrementPC(bin(ir)[2:4])
+                # print("LDI register running")
+                # print(ir)
+
+                self.incrementPC(3)
                 
             # Print numeric value stored in the given register
-            elif ir == 0x47:
-                print(self.registers[operand_a])
+            elif ir == 71:
+                # print("running")
+                print(self.reg[operand_a])
 
-                self.incrementPC(bin(ir)[2:4])
+                self.incrementPC(2)
+
+            elif ir == 162:
+                # print("Running Multiply")
+                self.alu("MUL", operand_a, operand_b)
+
+                self.incrementPC(3)
 
             # Halt the CPU
-            elif ir == 0x01:
+            elif ir == 1:
+                print(f"")
                 self.running = False
-                self.incrementPC(bin(ir)[2:4])
+                self.incrementPC(1)
 
 
