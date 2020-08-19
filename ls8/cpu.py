@@ -75,9 +75,6 @@ class CPU:
         elif op == "SUB":
             self.reg[reg_a] -= self.reg[reg_b]
         elif op == "MUL":
-            # print("Running multiply")
-            # print(self.reg[reg_a])
-            # print(self.reg[reg_b])
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == "DIV":
             self.reg[reg_a] /= self.reg[reg_b]
