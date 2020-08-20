@@ -6,6 +6,8 @@ OP_LDI = 0b10000010
 OP_PRN = 0b01000111
 OP_MUL = 0b10100010
 OP_HLT = 0b00000001
+OP_PUSH = 0b01000101
+OP_POP = 0b01000110
 
 class CPU:
     """Main CPU class."""
@@ -15,11 +17,15 @@ class CPU:
         self.ram = [0b00000000] * 256
         self.reg = [0b00000000] * 8
 
+        self.reg[7] = 0xf4  # Stack pointer
+
         self.branchtable = {}
         self.branchtable[OP_LDI] = self.ldi
         self.branchtable[OP_PRN] = self.prn
         self.branchtable[OP_MUL] = self.mul
         self.branchtable[OP_HLT] = self.hlt
+        self.branchtable[OP_PUSH] = self.push
+        self.branchtable[OP_POP] = self.pop
 
         self.running = True
 
@@ -135,10 +141,43 @@ class CPU:
         self.running = False
         self.incrementPC(1)
 
+    def push(self, register):
+        # Decrement SP
+        self.reg[7] -= 1
+
+        # Get value from register
+        reg_num = self.ram[self.pc + 1]
+        value = self.reg[reg_num] # We want to push this value
+
+        # Store it on the stack
+        top_of_stack_addr = self.reg[7]
+        self.ram[top_of_stack_addr] = value
+
+        self.incrementPC(2)
+
+    def pop(self, register):
+        # Copy value from top of the stack into given register
+        reg_num = self.ram[self.pc + 1]
+        top_of_stack_addr = self.reg[7]
+        value = self.ram[top_of_stack_addr] # We want to pop this value
+
+        # Store it in the given register
+        self.reg[reg_num] = value
+
+        # Increment SP
+        self.reg[7] += 1
+        
+        self.incrementPC(2)
+
+
+        
+
     def run(self):
         """Run the CPU."""
         while self.running:
             ir = self.ram_read(self.pc)
+
+            print(f"IR: {ir}")
 
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
