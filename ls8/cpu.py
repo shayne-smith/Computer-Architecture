@@ -4,10 +4,15 @@ import sys
 
 OP_LDI = 0b10000010
 OP_PRN = 0b01000111
+OP_ADD = 0b10100000
 OP_MUL = 0b10100010
 OP_HLT = 0b00000001
 OP_PUSH = 0b01000101
 OP_POP = 0b01000110
+OP_CALL = 0b01010000
+OP_RET = 0b00010001
+
+SP = 7 # Stack pointer constant
 
 class CPU:
     """Main CPU class."""
@@ -17,15 +22,18 @@ class CPU:
         self.ram = [0b00000000] * 256
         self.reg = [0b00000000] * 8
 
-        self.reg[7] = 0xf4  # Stack pointer
+        self.reg[SP] = 0xf4  # Stack pointer
 
         self.branchtable = {}
         self.branchtable[OP_LDI] = self.ldi
         self.branchtable[OP_PRN] = self.prn
+        self.branchtable[OP_ADD] = self.add
         self.branchtable[OP_MUL] = self.mul
         self.branchtable[OP_HLT] = self.hlt
         self.branchtable[OP_PUSH] = self.push
         self.branchtable[OP_POP] = self.pop
+        self.branchtable[OP_CALL] = self.call
+        self.branchtable[OP_RET] = self.ret
 
         self.running = True
 
@@ -80,7 +88,7 @@ class CPU:
             print("Program was empty!")
             sys.exit(3)
 
-        print(f"RAM: {self.ram}")
+        # print(f"RAM: {self.ram}")
 
 
     def alu(self, op, reg_a, reg_b):
@@ -133,6 +141,10 @@ class CPU:
         print(self.reg[operand_a])
         self.incrementPC(2)
 
+    def add(self, operand_a, operand_b):
+        self.alu("ADD", operand_a, operand_b)
+        self.incrementPC(3)
+
     def mul(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
         self.incrementPC(3)
@@ -143,41 +155,58 @@ class CPU:
 
     def push(self, register):
         # Decrement SP
-        self.reg[7] -= 1
+        self.reg[SP] -= 1
 
         # Get value from register
         reg_num = self.ram[self.pc + 1]
         value = self.reg[reg_num] # We want to push this value
 
         # Store it on the stack
-        top_of_stack_addr = self.reg[7]
+        top_of_stack_addr = self.reg[SP]
         self.ram[top_of_stack_addr] = value
+
+        # print(f"{self.ram}")
 
         self.incrementPC(2)
 
     def pop(self, register):
-        # Copy value from top of the stack into given register
+        # Copy value from top of the stack
         reg_num = self.ram[self.pc + 1]
-        top_of_stack_addr = self.reg[7]
+        top_of_stack_addr = self.reg[SP]
         value = self.ram[top_of_stack_addr] # We want to pop this value
 
         # Store it in the given register
         self.reg[reg_num] = value
 
         # Increment SP
-        self.reg[7] += 1
+        self.reg[SP] += 1
         
         self.incrementPC(2)
 
+    def call(self, register):
+        # Push return address
+        ret_addr = self.pc + 2
+        self.reg[SP] -= 1
+        self.ram[self.reg[SP]] = ret_addr
 
-        
+        # Call the subroutine
+        reg_num = self.ram[self.pc + 1]
+        self.pc = self.reg[reg_num]
+
+    def ret(self):
+        # Pop the return addr off the stack
+        ret_addr = self.ram[self.reg[SP]]
+        self.reg[SP] += 1
+
+        # Set the PC to it
+        self.pc = ret_addr
 
     def run(self):
         """Run the CPU."""
         while self.running:
             ir = self.ram_read(self.pc)
 
-            print(f"IR: {ir}")
+            # print(f"IR: {ir}")
 
             operand_a = self.ram_read(self.pc + 1)
             operand_b = self.ram_read(self.pc + 2)
