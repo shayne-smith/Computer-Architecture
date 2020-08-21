@@ -4,15 +4,26 @@ import sys
 
 OP_LDI = 0b10000010
 OP_PRN = 0b01000111
-OP_ADD = 0b10100000
-OP_MUL = 0b10100010
 OP_HLT = 0b00000001
+
+OP_ADD = 0b10100000
+OP_SUB = 0b10100001
+OP_MUL = 0b10100010
+OP_DIV = 0b10100011
+
 OP_PUSH = 0b01000101
 OP_POP = 0b01000110
+
 OP_CALL = 0b01010000
 OP_RET = 0b00010001
 
-SP = 7 # Stack pointer constant
+OP_CMP = 0b10100111
+OP_JMP = 0b01010100
+OP_JEQ = 0b01010101
+OP_JNE = 0b01010110
+ 
+IR = 6 # Interrupt Status constant
+SP = 7 # Stack Pointer constant
 
 class CPU:
     """Main CPU class."""
@@ -28,12 +39,18 @@ class CPU:
         self.branchtable[OP_LDI] = self.ldi
         self.branchtable[OP_PRN] = self.prn
         self.branchtable[OP_ADD] = self.add
+        self.branchtable[OP_SUB] = self.sub
         self.branchtable[OP_MUL] = self.mul
+        self.branchtable[OP_DIV] = self.div
         self.branchtable[OP_HLT] = self.hlt
         self.branchtable[OP_PUSH] = self.push
         self.branchtable[OP_POP] = self.pop
         self.branchtable[OP_CALL] = self.call
         self.branchtable[OP_RET] = self.ret
+        self.branchtable[OP_CMP] = self.cmp
+        self.branchtable[OP_JMP] = self.jmp
+        self.branchtable[OP_JEQ] = self.jeq
+        self.branchtable[OP_JNE] = self.jne
 
         self.running = True
 
@@ -91,17 +108,31 @@ class CPU:
         # print(f"RAM: {self.ram}")
 
 
-    def alu(self, op, reg_a, reg_b):
+    def alu(self, op, reg_a, reg_b=False):
         """ALU operations."""
 
-        if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
-        elif op == "SUB":
-            self.reg[reg_a] -= self.reg[reg_b]
-        elif op == "MUL":
-            self.reg[reg_a] *= self.reg[reg_b]
-        elif op == "DIV":
-            self.reg[reg_a] /= self.reg[reg_b]
+        if reg_b != False:
+            if op == "ADD":
+                self.reg[reg_a] += self.reg[reg_b]
+            elif op == "SUB":
+                self.reg[reg_a] -= self.reg[reg_b]
+            elif op == "MUL":
+                self.reg[reg_a] *= self.reg[reg_b]
+            elif op == "DIV":
+                self.reg[reg_a] /= self.reg[reg_b]
+            elif op == "AND":
+                self.reg[reg_a] = self.reg[reg_a] & self.reg[reg_b]
+            elif op == "OR":
+                self.reg[reg_a] = self.reg[reg_a] | self.reg[reg_b]
+            elif op == "XOR":
+                self.reg[reg_a] = self.reg[reg_a] ^ self.reg[reg_b]
+            elif op == "SHL":
+                self.reg[reg_a] = self.reg[reg_a] << reg_b
+            elif op == "SHR":
+                self.reg[reg_a] = self.reg[reg_a] >> reg_b
+        elif reg_b == False:
+            if op == "NOT":
+                self.reg[reg_a] = ~self.reg[reg_a]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -145,8 +176,16 @@ class CPU:
         self.alu("ADD", operand_a, operand_b)
         self.incrementPC(3)
 
+    def sub(self, operand_a, operand_b):
+        self.alu("SUB", operand_a, operand_b)
+        self.incrementPC(3)
+
     def mul(self, operand_a, operand_b):
         self.alu("MUL", operand_a, operand_b)
+        self.incrementPC(3)
+    
+    def div(self, operand_a, operand_b):
+        self.alu("DIV", operand_a, operand_b)
         self.incrementPC(3)
 
     def hlt(self):
@@ -200,6 +239,39 @@ class CPU:
 
         # Set the PC to it
         self.pc = ret_addr
+
+    def cmp(self, registerA, registerB):
+        if self.reg[registerA] == self.reg[registerB]:
+            self.fl = 0b00000001
+        elif self.reg[registerA] > self.reg[registerB]:
+            self.fl = 0b00000010
+        elif self.reg[registerA] < self.reg[registerB]:
+            self.fl = 0b00000100
+
+        # print(f"flag: {self.fl}")
+        self.incrementPC(3)
+
+    def jmp(self, register):
+        # Call the subroutine
+        reg_num = self.ram[self.pc + 1]
+        self.pc = self.reg[reg_num]
+    
+    def jeq(self, register):
+        if self.fl % 2 == 1:
+            reg_num = self.ram[self.pc + 1]
+            self.pc = self.reg[reg_num]
+            # print(f" JEQ register: {self.reg[reg_num]}")
+        else:
+            self.incrementPC(2)
+
+    def jne(self, register):
+        if self.fl % 2 == 0:
+            reg_num = self.ram[self.pc + 1]
+            self.pc = self.reg[reg_num]
+            # print(f"JNE register: {self.reg[reg_num]}")
+        else:
+            self.incrementPC(2)
+
 
     def run(self):
         """Run the CPU."""
